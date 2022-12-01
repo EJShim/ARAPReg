@@ -67,8 +67,7 @@ class Writer:
                 model_path, 'checkpoint_{:04d}.pt'.format(epoch))
         )
 
-    def load_checkpoint(self, model, latent_vecs=None, optimizer=None,
-                        scheduler=None, test=False, checkpoint=None):
+    def load_checkpoint(self, model, latent_vecs=None, optimizer=None,scheduler=None, test=False, checkpoint=None):
         model_path = self.args.checkpoints_dir
         if test==True:
             model_path = self.args.checkpoints_dir_test
