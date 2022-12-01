@@ -2,14 +2,11 @@ import pickle
 import argparse
 import os.path as osp
 import torch
-import torch.nn as nn
-from utils import mesh_sampling
+from utils import mesh_sampling, utils
 from utils.mesh_sampling import Mesh
 import vtk
-# import torch.backends.cudnn as cudnn
-# import torch_geometric.transforms as T
 
-from models import AE
+from models import AE, AE_single
 
 parser = argparse.ArgumentParser(description='mesh autoencoder')
 parser.add_argument('--exp_name', type=str, default='arap')
@@ -20,8 +17,7 @@ parser.add_argument('--in_channels', type=int, default=3)
 # network hyperparameters
 parser.add_argument('--out_channels',
                     nargs='+',
-                    #default=[32, 32, 32, 64],
-                    default=[16, 16, 16, 32],
+                    default=[32, 32, 32, 64],                    
                     type=int)
 
 parser.add_argument('--ds_factors',
@@ -69,8 +65,6 @@ else:
     with open(transform_fp, 'rb') as f:
         tmp = pickle.load(f, encoding='latin1')
 
-exit()
-
 edge_index_list = [utils.to_edge_index(adj).to(device) for adj in tmp['adj']]
 down_transform_list = [
     utils.to_sparse(down_transform).to(device)
@@ -82,9 +76,6 @@ up_transform_list = [
 ]
 
 
-
-
-
 model = AE(args.in_channels,
         args.out_channels,
         args.latent_channels,
@@ -93,5 +84,12 @@ model = AE(args.in_channels,
         up_transform_list,
         K=args.K)    
 
-data = torch.load(latest_checkpoint)
-model.load_state_dict(data["model_state_dict"])
+print(model.state_dict().keys())
+
+
+latest_checkpoint = 'work_dir/FAUST/checkpoint_0960.pt'
+data = torch.load(latest_checkpoint, map_location=device)
+state_dict = data['model_state_dict']
+state_dict = {k.partition('module.')[2]: v for k,v in state_dict.items()} # Remove Prefix
+model.load_state_dict(state_dict)
+
