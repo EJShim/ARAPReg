@@ -1,26 +1,23 @@
 import vtk
+import numpy as np
+import torch
 
 if __name__ == "__main__":
-    iren = vtk.vtkRenderWindowInteractor()
-    iren.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
-    renWin = vtk.vtkRenderWindow()
-    iren.SetRenderWindow(renWin)
-    ren = vtk.vtkRenderer()
-    renWin.AddRenderer(ren)
+    train_data = torch.tensor( np.load("data/DFaust/raw/dfaust/train.npy"))
 
-    reader = vtk.vtkPLYReader()
-    reader.SetFileName("template/smpl_male_template.ply")
-    reader.Update()
-    polydata = reader.GetOutput()
-    print(polydata.GetNumberOfPoints())
+    print(train_data.shape)
+    
 
-    mapper = vtk.vtkPolyDataMapper()
-    mapper.SetInputData(reader.GetOutput())
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
+    train_data_mean = train_data.mean(dim=0)
+    train_data_std = train_data.std(dim=0)
 
-    ren.AddActor(actor)
-    ren.ResetCamera()
-    renWin.Render()
-    iren.Start()
+    print(train_data_mean.shape)
+    print(train_data_std.shape)
 
+    output = {
+        'mean' : train_data_mean,
+        'std' : train_data_std
+    }
+
+    torch.save(output, "data/DFaust/raw/meanstd.pt")
+    

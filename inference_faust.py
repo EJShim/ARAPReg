@@ -86,6 +86,10 @@ model = AE(args.in_channels,
         up_transform_list,
         K=args.K)
 
+meanstd = torch.load("data/DFaust/raw/meanstd.pt")
+mean = meanstd['mean']
+std = meanstd['std']
+
 latest_checkpoint = 'work_dir/FAUST/checkpoint_0960.pt'
 data = torch.load(latest_checkpoint, map_location=device)
 state_dict = data['model_state_dict']
@@ -95,13 +99,13 @@ model.load_state_dict(state_dict)
 
 train_latent_vectors = data['train_latent_vecs']['weight']
 
-sample_idx = 0
+print(train_latent_vectors.shape)
+
+sample_idx = 4000
 sample_input = train_latent_vectors[sample_idx:sample_idx+1]
 sample_output = model(sample_input)
 
-# Need to denormalize!!
-print(sample_output.shape)
-
+out_v = sample_output*std + mean
 
 ## Visualize
 iren = vtk.vtkRenderWindowInteractor()
@@ -114,7 +118,7 @@ renWin.AddRenderer(ren)
 
 output_polydata = vtk.vtkPolyData()
 output_polydata.DeepCopy(template_poly)
-output_polydata.GetPoints().SetData(numpy_support.numpy_to_vtk(sample_output[0].detach().numpy()))
+output_polydata.GetPoints().SetData(numpy_support.numpy_to_vtk(out_v[0].detach().numpy()))
 
 
 mapper = vtk.vtkPolyDataMapper()
