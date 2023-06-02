@@ -22,5 +22,5 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python -W ignore main.py \
 --test_decay_step 5 \
 --mode test \
 --distributed \
---checkpoint work_dir/DFaust/out/arap/checkpoints/checkpoint_0410.pt \
---test_checkpoint work_dir/DFaust/out/arap/test_checkpoints/checkpoint_1230.pt \
+--checkpoint work_dir/DFaust/out/arap/checkpoints/checkpoint_0320.pt \
+--test_checkpoint work_dir/DFaust/out/arap/test_checkpoints/checkpoint_0960.pt \
