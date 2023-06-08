@@ -17,8 +17,8 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python -W ignore main.py \
 --work_dir ./work_dir/DFaust \
 --dataset DFaust \
 --data_dir ./data/DFaust \
---distributed \
---alsotest \
+# --distributed \
+# --alsotest \
 #--continue_train True \
 #--checkpoint work_dir/DFaust/out/arap/checkpoints/checkpoint_0410.pt \
 #--test_checkpoint work_dir/DFaust/out/arap/test_checkpoints/checkpoint_01200.pt \
