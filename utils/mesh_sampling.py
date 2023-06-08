@@ -3,8 +3,147 @@ import heapq
 import numpy as np
 import os
 import scipy.sparse as sp
-from psbody.mesh import Mesh
+# from psbody.mesh import Mesh
 from scipy.spatial import KDTree
+import vtk
+
+class Mesh:
+    def __init__(self, v=None, f=None):
+        self.v = v
+        self.f = f
+        self.polydata = None
+        
+        if self.v is not None and self.f is not None:
+            self.polydata = vtk.vtkPolyData()
+
+            points = vtk.vtkPoints()
+            for vertex in self.v:
+                points.InsertNextPoint(vertex)
+            self.polydata.SetPoints(points)
+
+            cellArray = vtk.vtkCellArray()
+            for face in self.f:
+                cell = vtk.vtkTriangle()
+                cell.GetPointIds().SetId(0, face[0])
+                cell.GetPointIds().SetId(1, face[1])
+                cell.GetPointIds().SetId(2, face[2])
+                cellArray.InsertNextCell(cell)
+            self.polydata.SetPolys(cellArray)            
+            
+
+    def SetPolyData(self, polydata):
+        # print(polydata.GetNumberOfPoints())
+
+        nPoints = polydata.GetNumberOfPoints()
+        nFaces = polydata.GetNumberOfCells()
+
+        vertices = []
+        for vid in range(nPoints):
+            v = polydata.GetPoint(vid)
+            vertices.append(v)
+        self.v = np.array(vertices)
+        
+        faces = []
+        for fid in range(nFaces):
+            cell = polydata.GetCell(fid)
+            faces.append( [cell.GetPointId(0), cell.GetPointId(1), cell.GetPointId(2)] )
+            # print(cell.GetPointId(0))
+
+        self.f = np.array(faces)
+        self.polydata = polydata
+
+    
+
+
+    def is_on(self, a, b, c):
+        "Return true iff point c intersects the line segment from a to b."
+        # (or the degenerate case that all 3 points are coincident)
+
+
+        def collinear(a, b, c):
+            "Return true iff a, b, and c all lie on the same line."
+            return (b[0] - a[0]) * (c[1] - a[1]) == (c[0] - a[0]) * (b[1] - a[1])
+
+        def within(p, q, r):
+            "Return true iff q is between p and r (inclusive)."
+            return p <= q <= r or r <= q <= p
+
+
+        return (collinear(a, b, c)
+                and (within(a[0], c[0], b[0]) if a[0] != b[0] else 
+                    within(a[1], c[1], b[1])))
+
+
+    def nearest(self, v_samples):
+
+        nearest_faces = []
+        "nearest_part tells you whether the closest point in triangle abc is in the interior (0), on an edge (ab:1,bc:2,ca:3), or a vertex (a:4,b:5,c:6)"
+
+        nearest_parts = [] 
+        nearest_vertices = []
+
+
+        cellLocator = vtk.vtkCellLocator()
+        cellLocator.SetDataSet(self.polydata)
+        cellLocator.BuildLocator()
+
+
+        for vertex in v_samples:
+
+            closestPoint = [0, 0, 0]
+            cellId = vtk.reference(0)            
+
+            
+            cellLocator.FindClosestPoint(vertex, closestPoint, cellId, vtk.mutable(-1), vtk.mutable(-1.0))
+
+
+            #Check cloesstpoint In the triangle (0), on the Edge (1), On the Vertex(2)
+            part = 0
+            triangle = self.polydata.GetCell(cellId)
+
+            
+            #TODO  : Add Part checker!!!
+            a = np.array(self.polydata.GetPoint(triangle.GetPointId(0)))
+            b = np.array(self.polydata.GetPoint(triangle.GetPointId(1)))
+            c = np.array(self.polydata.GetPoint(triangle.GetPointId(2)))
+            target = np.array(closestPoint)
+            if np.array_equal(  a ,target ):
+                part = 4
+            elif np.array_equal( b  , target ):
+                part = 5
+            elif np.array_equal( c  , target ):
+                part = 6
+            elif self.is_on(a, b, target):
+                part = 1
+            elif self.is_on(b, c, target):
+                part = 2
+            elif self.is_on(c, a, target):
+                part = 3
+
+            #TODO : Debug This Part Later        
+            weights = [0, 0, 0]
+            inside = triangle.EvaluatePosition(closestPoint, [0, 0, 0], vtk.mutable(0), [0,0,0], vtk.mutable(0.0), weights)
+            # if weights[0] == 1.0: part = 4
+            # elif weights[1] == 1.0 : part = 5
+            # elif weights[2] == 1.0 : part = 6
+
+            # if part == 1:
+            #     print(inside, "\t", weights)
+                
+
+            nearest_faces.append(cellId)
+            nearest_parts.append(part) #???
+            nearest_vertices.append(closestPoint)
+
+        
+        # print(v_samples, v_samples.shape, self.polydata.GetNumberOfPoints())
+
+        nearest_faces = np.array(nearest_faces)
+        nearest_parts = np.array(nearest_parts)
+        nearest_vertices = np.array(nearest_vertices)
+        return nearest_faces, nearest_parts, nearest_vertices
+
+
 
 def row(A):
     return A.reshape((1, -1))
@@ -84,8 +223,9 @@ def setup_deformation_transfer(source, target, use_normals=False):
     coeffs_v = np.zeros(3 * target.v.shape[0])
     coeffs_n = np.zeros(3 * target.v.shape[0])
 
-    nearest_faces, nearest_parts, nearest_vertices = source.compute_aabb_tree(
-    ).nearest(target.v, True)
+    # nearest_faces, nearest_parts, nearest_vertices = source.compute_aabb_tree().nearest(target.v, True)
+    nearest_faces, nearest_parts, nearest_vertices = source.nearest(target.v) # Not Sure For this
+
     nearest_faces = nearest_faces.ravel().astype(np.int64)
     nearest_parts = nearest_parts.ravel().astype(np.int64)
     nearest_vertices = nearest_vertices.ravel()

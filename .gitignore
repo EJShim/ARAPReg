@@ -1,3 +1,8 @@
 **/__pycache__/
+<<<<<<< HEAD
 data/
 work_dir/
+=======
+work_dir/FAUST
+.DS_Store
+>>>>>>> f4ee0525a7ab07ee7c75311808a2e5c2e5fa2215
